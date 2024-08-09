@@ -17,6 +17,8 @@ jobs:
       SONAR_PROJECT_KEY: maven-app
       BASE_IMAGE: maven:latest 
       JAR_FILE_NAME: my-sample-app-0.0.1-SNAPSHOT.jar
+      # TARGET_ARTIFACT: <your artifactory>.jfrog.io
+
 
 
     steps:
@@ -24,12 +26,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # TASK 2
+      # TASK 2: Improve it by adding setting.xml
       - name: Install dependencies
         run: |
           mvn clean install 
-       # FIXME: Add settings.xml file to the project for JFrog Artifactory
-        # mvn clean install -s settings.xml
+
 
       # TASK 3: Run Snyk to check for vulnerabilities
       - name: Run Snyk to check for vulnerabilities
@@ -57,7 +58,6 @@ jobs:
       - name: Run unit tests
         run: mvn test 
 
-      ## NOTE: Don't pass the secrets as a variable-> it will expose in the final image 
       # TASK 6: Set up Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -67,18 +67,8 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_ID }}
           password: ${{ secrets.DOCKER_TOKEN }}
+          # registry: $ {{ secrets.TARGET_ARTIFACT }}
 
-
-      # TASK 7: install JFrog CLI
-      # Install and configure JFrog CLI
-      # - name: Set up JFrog CLI
-      #   uses: jfrog/setup-jfrog-cli@v4
-      #   with:
-      #     # JFrog platform URL
-      #     JF_URL: ${{ secrets.JFROG_URL }}
-      #     # JFrog platform credentials
-      #     JF_USER: ${{ secrets.JFROG_USERNAME }}
-      #     JF_PASSWORD: ${{ secrets.JFROG_PASSWORD }}
 
 
       # TASK 8: build and Push to DockerHub
@@ -92,12 +82,6 @@ jobs:
             BASE_IMAGE=${{env.BASE_IMAGE}}
             APP_NAME=${{env.JAR_FILE_NAME}}
 
-      # # FIXME: Push Docker image to JFrog Artifactory
-      # - name: Push Docker image to JFrog or Docker Hub
-      #   run: |
-      #     docker image ls 
-      #     docker push hong0331/py-example:latest 
-      #   # jfrog rt docker-push ${{ secrets.JFROG_URL }}/${{ secrets.DOCKER_IMAGE }}
 
 
       
