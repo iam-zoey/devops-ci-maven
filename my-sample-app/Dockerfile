@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG BASE_IMAGE_VERSION=maven:latest
+ARG BASE_IMAGE=maven:latest
 
 FROM ${BASE_IMAGE}
 ARG APP_NAME="my-sample-app"
