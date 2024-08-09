@@ -1,0 +1,103 @@
+name: Build and Test with JFrog CLI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      NEW_IMAGE_NAME: maven-example # dockerhub image name 
+      IMAGE_VERSION: 0.1 # dockerhub image tag
+      SONAR_PROJECT_KEY: maven-app
+      BASE_IMAGE: maven:latest 
+      JAR_FILE_NAME: my-sample-app-0.0.1-SNAPSHOT.jar
+
+
+    steps:
+      # TASK 1: Get the Source Code 
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # TASK 2
+      - name: Install dependencies
+        run: |
+          mvn clean install 
+       # FIXME: Add settings.xml file to the project for JFrog Artifactory
+        # mvn clean install -s settings.xml
+
+      # TASK 3: Run Snyk to check for vulnerabilities
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/maven@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+      # TASK 4: Run SonarQube analysis
+      # - name: Run SonarQube analysis
+      #   uses: sonarsource/sonarqube-scan-action@master
+        #   args: >
+        #     -Dsonar.projectKey=python-app
+        #     -Dsonar.sources=.
+        #     -Dsonar.host.url=${{ secrets.SONAR_URL }}
+        #     -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+          # -Dsonar.organization=your_organization
+        # uses: sonarsource/sonarqube-quality-gate-action@master
+        #     timeout-minutes: 5
+        #     env:
+        #       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      # TASK 5: Run unit tests
+      - name: Run unit tests
+        run: mvn test 
+
+      ## NOTE: Don't pass the secrets as a variable-> it will expose in the final image 
+      # TASK 6: Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      # Docker login
+      - name: Docker Hub Login 
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_ID }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+
+      # TASK 7: install JFrog CLI
+      # Install and configure JFrog CLI
+      # - name: Set up JFrog CLI
+      #   uses: jfrog/setup-jfrog-cli@v4
+      #   with:
+      #     # JFrog platform URL
+      #     JF_URL: ${{ secrets.JFROG_URL }}
+      #     # JFrog platform credentials
+      #     JF_USER: ${{ secrets.JFROG_USERNAME }}
+      #     JF_PASSWORD: ${{ secrets.JFROG_PASSWORD }}
+
+
+      # TASK 8: build and Push to DockerHub
+      - name: Build and Push to DockerHub
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKER_ID }}/${{env.NEW_IMAGE_NAME}}:${{env.IMAGE_VERSION}}
+          build-args: |
+            BASE_IMAGE=${{env.BASE_IMAGE}}
+            APP_NAME=${{env.JAR_FILE_NAME}}
+
+      # # FIXME: Push Docker image to JFrog Artifactory
+      # - name: Push Docker image to JFrog or Docker Hub
+      #   run: |
+      #     docker image ls 
+      #     docker push hong0331/py-example:latest 
+      #   # jfrog rt docker-push ${{ secrets.JFROG_URL }}/${{ secrets.DOCKER_IMAGE }}
+
+
+      
